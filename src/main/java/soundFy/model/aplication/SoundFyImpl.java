@@ -1,7 +1,6 @@
 package soundFy.model.aplication;
 
 
-
 import soundFy.model.domain.Playlist;
 import soundFy.model.domain.TopArtists;
 import soundFy.model.domain.Track;
@@ -82,8 +81,7 @@ public class SoundFyImpl implements SoundFy {
 
     @Override
     public void addTrackToPlaylist(Playlist playlist, Track track) {
-        if (!map.containsKey(playlist))
-            throw new IllegalArgumentException("La playlist" + playlist.getId() + " no existe en SoundFy.");
+        checkPlaylistExists(playlist);
         if (map.get(playlist).contains(track))
             throw new IllegalArgumentException("La canción " + track.getTitle() + " ya existe en la lista.");
         map.get(playlist).add(track);
@@ -92,8 +90,7 @@ public class SoundFyImpl implements SoundFy {
     @Override
     public void addTrackToPlaylist(Playlist playlist, int position, Track track) {
 
-        if (!map.containsKey(playlist))
-            throw new IllegalArgumentException("La playlist" + playlist.getId() + " no existe en SoundFy.");
+        checkPlaylistExists(playlist);
         if (map.get(playlist).contains(track))
             throw new IllegalArgumentException("La canción " + track.getTitle() + " ya existe en la lista.");
         if (position < 0) position = 0;
@@ -107,26 +104,34 @@ public class SoundFyImpl implements SoundFy {
     @Override
     public List<Track> getTracks(Playlist playlist) {
 
-        if (!map.containsKey(playlist))
-            throw new IllegalArgumentException("La playlist" + playlist.getId() + " no existe en Spotify.");
-        return List.copyOf(map.get(playlist));
+        checkPlaylistExists(playlist);
+        // return List.copyOf(map.get(playlist));
 
-        //return map.get(playlist);
+        return map.get(playlist).stream().toList();
         //  return Collections.unmodifiableList(map.get(playlist));
+    }
+
+    private void checkPlaylistExists(Playlist playlist) {
+        if (!map.containsKey(playlist))
+            throw playlistEmptyException();
+    }
+    private RuntimeException playlistEmptyException() {
+        return new RuntimeException("The playlist is empty.");
     }
 
     @Override
     public Track findLongestTrack(Playlist playlist) {
 
+        checkPlaylistExists(playlist);
         return getTracks(playlist).stream()
                 .max(Comparator.comparing(Track::getSeconds))
-                .orElse(null);
+                .orElseThrow(this::playlistEmptyException);
     }
 
 
     @Override
     public Track findShortestTrack(Playlist playlist) {
-
+        checkPlaylistExists(playlist);
      /*
         var list = new ArrayList<>(map.get(playlist));
         list.sort(Comparator.comparingInt(Track::getSeconds));
@@ -134,14 +139,15 @@ public class SoundFyImpl implements SoundFy {
         */
         return getTracks(playlist).stream()
                 .min(Comparator.comparing(Track::getSeconds))
-                .orElse(null);
+                .orElseThrow(this::playlistEmptyException);
     }
 
     @Override
     public Double getAverageDurationTrack(Playlist playlist) {
+        checkPlaylistExists(playlist);
         return getTracks(playlist).stream()
                 .mapToInt(Track::getSeconds).average()
-                .orElse(0);
+                .orElseThrow(this::playlistEmptyException);
     }
 
     @Override
@@ -210,6 +216,7 @@ public class SoundFyImpl implements SoundFy {
     @Override
     public Set<String> getGenres(Playlist playlist) {
 
+        checkPlaylistExists(playlist);
         return getTracks(playlist).stream()
                 .flatMap(trk -> trk.getGenres().stream())
                 .collect(Collectors.toSet());
@@ -217,12 +224,12 @@ public class SoundFyImpl implements SoundFy {
 
     @Override
     public SortedSet<String> getSortedGenres(Playlist playlist) {
-
+        checkPlaylistExists(playlist);
         return new TreeSet<>(getGenres(playlist));
     }
 
     public List<TopArtists> getTopArtists(Playlist playlist, Integer top) {
-
+        checkPlaylistExists(playlist);
         return getTracks(playlist)
                 .stream()
                 .flatMap(track -> track.getArtists().stream())
